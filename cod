@@ -1,0 +1,263 @@
+#include <iostream>
+#include <iomanip>
+#include <string>
+#include <vector>
+#include <limits>
+
+using namespace std;
+
+// Структура для хранения данных о мероприятии
+struct SafetyMeasure {
+    string name;
+    double implementation_cost;
+    double annual_maintenance;
+    double expected_injury_reduction; // в процентах
+};
+
+// Класс для расчетов эффективности
+class EfficiencyCalculator {
+private:
+    double base_injury_rate; // базовый уровень травматизма
+    double cost_per_injury;  // средняя стоимость одного несчастного случая
+    int employee_count;      // численность работников
+    
+public:
+    // Установка параметров
+    void setParameters(double base_rate, double cost, int count) {
+        base_injury_rate = base_rate;
+        cost_per_injury = cost;
+        employee_count = count;
+    }
+    
+    // Расчет годовой экономии
+    double calculateAnnualSavings(const SafetyMeasure& measure) {
+        double injury_reduction = base_injury_rate * 
+                                 (measure.expected_injury_reduction / 100.0);
+        return injury_reduction * cost_per_injury;
+    }
+    
+    // Расчет срока окупаемости
+    double calculatePaybackPeriod(const SafetyMeasure& measure) {
+        double annual_savings = calculateAnnualSavings(measure);
+        double net_annual_effect = annual_savings - measure.annual_maintenance;
+        
+        if (net_annual_effect <= 0) {
+            return -1; // мероприятие не окупается
+        }
+        
+        return measure.implementation_cost / net_annual_effect;
+    }
+    
+    // Расчет коэффициента эффективности
+    double calculateEfficiencyCoefficient(const SafetyMeasure& measure) {
+        double annual_savings = calculateAnnualSavings(measure);
+        double net_annual_effect = annual_savings - measure.annual_maintenance;
+        
+        if (measure.implementation_cost == 0) {
+            return net_annual_effect > 0 ? 999.99 : 0;
+        }
+        
+        return net_annual_effect / measure.implementation_cost;
+    }
+};
+
+// Функция для отображения меню
+int show_menu() {
+    cout << "\n=========================================\n";
+    cout << " КАЛЬКУЛЯТОР ЭФФЕКТИВНОСТИ МЕРОПРИЯТИЙ\n";
+    cout << "         ПО ОХРАНЕ ТРУДА\n";
+    cout << "=========================================\n";
+    cout << "1. Расчет эффективности мероприятия\n";
+    cout << "2. Тестирование программы\n";
+    cout << "3. Выход\n";
+    cout << "=========================================\n";
+    cout << "Выберите пункт меню: ";
+    
+    int choice;
+    cin >> choice;
+    
+    // Очистка буфера ввода
+    cin.clear();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    
+    return choice;
+}
+
+// Функция для ввода данных мероприятия
+SafetyMeasure input_measure_data() {
+    SafetyMeasure measure;
+    
+    cout << "\nВведите название мероприятия: ";
+    getline(cin, measure.name);
+    
+    cout << "Введите стоимость внедрения (руб.): ";
+    while (!(cin >> measure.implementation_cost) || measure.implementation_cost < 0) {
+        cout << "Ошибка! Введите положительное число: ";
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+    
+    cout << "Введите годовые затраты на обслуживание (руб.): ";
+    while (!(cin >> measure.annual_maintenance) || measure.annual_maintenance < 0) {
+        cout << "Ошибка! Введите положительное число: ";
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+    
+    cout << "Введите ожидаемое снижение травматизма (%): ";
+    while (!(cin >> measure.expected_injury_reduction) || 
+           measure.expected_injury_reduction < 0 || 
+           measure.expected_injury_reduction > 100) {
+        cout << "Ошибка! Введите число от 0 до 100: ";
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+    
+    cin.ignore(); // очистка буфера
+    
+    return measure;
+}
+
+// Функция для расчета эффективности
+void calculate_efficiency() {
+    EfficiencyCalculator calculator;
+    
+    double base_rate, cost_per_injury;
+    int employee_count;
+    
+    cout << "\n=== ВВОД БАЗОВЫХ ПАРАМЕТРОВ ===\n";
+    
+    cout << "Введите базовый уровень травматизма (случаев/год): ";
+    while (!(cin >> base_rate) || base_rate < 0) {
+        cout << "Ошибка! Введите положительное число: ";
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+    
+    cout << "Введите среднюю стоимость одного несчастного случая (руб.): ";
+    while (!(cin >> cost_per_injury) || cost_per_injury < 0) {
+        cout << "Ошибка! Введите положительное число: ";
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+    
+    cout << "Введите численность работников: ";
+    while (!(cin >> employee_count) || employee_count <= 0) {
+        cout << "Ошибка! Введите положительное целое число: ";
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+    
+    calculator.setParameters(base_rate, cost_per_injury, employee_count);
+    cin.ignore(); // очистка буфера
+    
+    SafetyMeasure measure = input_measure_data();
+    
+    // Выполнение расчетов
+    double annual_savings = calculator.calculateAnnualSavings(measure);
+    double payback_period = calculator.calculatePaybackPeriod(measure);
+    double efficiency_coeff = calculator.calculateEfficiencyCoefficient(measure);
+    
+    // Вывод результатов
+    cout << "\n=== РЕЗУЛЬТАТЫ РАСЧЕТА ===\n";
+    cout << "Мероприятие: " << measure.name << endl;
+    cout << fixed << setprecision(2);
+    cout << "Годовая экономия: " << annual_savings << " руб.\n";
+    cout << "Чистый годовой эффект: " << annual_savings - measure.annual_maintenance << " руб.\n";
+    
+    if (payback_period > 0) {
+        cout << "Срок окупаемости: " << payback_period << " лет\n";
+    } else {
+        cout << "Срок окупаемости: мероприятие не окупается\n";
+    }
+    
+    cout << "Коэффициент эффективности: " << efficiency_coeff << endl;
+    
+    // Интерпретация результатов
+    cout << "\n=== ИНТЕРПРЕТАЦИЯ РЕЗУЛЬТАТОВ ===\n";
+    if (efficiency_coeff > 0.3) {
+        cout << "Мероприятие ВЫСОКОЭФФЕКТИВНО. Рекомендуется к внедрению.\n";
+    } else if (efficiency_coeff > 0.1) {
+        cout << "Мероприятие ЭФФЕКТИВНО. Может быть рассмотрено к внедрению.\n";
+    } else if (efficiency_coeff > 0) {
+        cout << "Мероприятие МАЛОЭФФЕКТИВНО. Требует дополнительного обоснования.\n";
+    } else {
+        cout << "Мероприятие НЕЭФФЕКТИВНО. Не рекомендуется к внедрению.\n";
+    }
+}
+
+// Функция для тестирования программы
+void run_tests() {
+    cout << "\n=== ТЕСТИРОВАНИЕ ПРОГРАММЫ ===\n";
+    
+    vector<pair<string, bool>> test_results;
+    EfficiencyCalculator calculator;
+    
+    // Тест 1: Нормальные данные
+    calculator.setParameters(5.0, 100000.0, 100);
+    SafetyMeasure test1 = {"Тест1", 500000.0, 50000.0, 20.0};
+    double result1 = calculator.calculateEfficiencyCoefficient(test1);
+    test_results.push_back({"Тест 1 (нормальные данные)", result1 > 0});
+    
+    // Тест 2: Нулевая стоимость внедрения
+    SafetyMeasure test2 = {"Тест2", 0.0, 10000.0, 10.0};
+    double result2 = calculator.calculateEfficiencyCoefficient(test2);
+    test_results.push_back({"Тест 2 (нулевая стоимость)", result2 > 0});
+    
+    // Тест 3: Максимальное снижение травматизма
+    SafetyMeasure test3 = {"Тест3", 1000000.0, 100000.0, 100.0};
+    double result3 = calculator.calculateEfficiencyCoefficient(test3);
+    test_results.push_back({"Тест 3 (100% снижение)", result3 > 0.1});
+    
+    // Тест 4: Неокупаемое мероприятие
+    SafetyMeasure test4 = {"Тест4", 1000000.0, 500000.0, 1.0};
+    double result4 = calculator.calculatePaybackPeriod(test4);
+    test_results.push_back({"Тест 4 (неокупаемое)", result4 < 0});
+    
+    // Вывод результатов тестирования
+    cout << "Результаты тестирования:\n";
+    for (const auto& test : test_results) {
+        cout << test.first << ": " 
+             << (test.second ? "ПРОЙДЕН" : "НЕ ПРОЙДЕН") << endl;
+    }
+    
+    cout << "\nВсего тестов: " << test_results.size() << endl;
+    int passed = 0;
+    for (const auto& test : test_results) {
+        if (test.second) passed++;
+    }
+    cout << "Успешно пройдено: " << passed << endl;
+}
+
+// Главная функция
+int main() {
+    setlocale(LC_ALL, "Russian");
+    
+    cout << "Программа 'Калькулятор эффективности мероприятий по охране труда'\n";
+    cout << "Версия 1.0\n";
+    cout << "Автор: Примоченко И.В.\n";
+    
+    bool running = true;
+    
+    while (running) {
+        int choice = show_menu();
+        
+        switch (choice) {
+            case 1:
+                calculate_efficiency();
+                break;
+            case 2:
+                run_tests();
+                break;
+            case 3:
+                cout << "\nЗавершение работы программы.\n";
+                running = false;
+                break;
+            default:
+                cout << "\nОшибка! Неверный пункт меню. Повторите ввод.\n";
+                break;
+        }
+    }
+    
+    return 0;
+}
