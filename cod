@@ -3,6 +3,11 @@
 #include <string>
 #include <vector>
 #include <limits>
+#include <utility>
+
+#ifdef _WIN32
+#include <windows.h>  // Для работы с кодировкой в Windows
+#endif
 
 using namespace std;
 
@@ -58,6 +63,22 @@ public:
         }
         
         return net_annual_effect / measure.implementation_cost;
+    }
+    
+    // Получение категории эффективности
+    string getEfficiencyCategory(double coefficient) const {
+        if (coefficient > 0.3) return "ВЫСОКОЭФФЕКТИВНО";
+        if (coefficient > 0.1) return "ЭФФЕКТИВНО";
+        if (coefficient > 0)   return "МАЛОЭФФЕКТИВНО";
+        return "НЕЭФФЕКТИВНО";
+    }
+    
+    // Получение рекомендации
+    string getRecommendation(double coefficient) const {
+        if (coefficient > 0.3) return "Рекомендуется к внедрению";
+        if (coefficient > 0.1) return "Может быть рассмотрено к внедрению";
+        if (coefficient > 0)   return "Требует дополнительного обоснования";
+        return "Не рекомендуется к внедрению";
     }
 };
 
@@ -175,67 +196,73 @@ void calculate_efficiency() {
     
     // Интерпретация результатов
     cout << "\n=== ИНТЕРПРЕТАЦИЯ РЕЗУЛЬТАТОВ ===\n";
-    if (efficiency_coeff > 0.3) {
-        cout << "Мероприятие ВЫСОКОЭФФЕКТИВНО. Рекомендуется к внедрению.\n";
-    } else if (efficiency_coeff > 0.1) {
-        cout << "Мероприятие ЭФФЕКТИВНО. Может быть рассмотрено к внедрению.\n";
-    } else if (efficiency_coeff > 0) {
-        cout << "Мероприятие МАЛОЭФФЕКТИВНО. Требует дополнительного обоснования.\n";
-    } else {
-        cout << "Мероприятие НЕЭФФЕКТИВНО. Не рекомендуется к внедрению.\n";
-    }
+    string category = calculator.getEfficiencyCategory(efficiency_coeff);
+    string recommendation = calculator.getRecommendation(efficiency_coeff);
+    cout << "Категория: " << category << endl;
+    cout << "Рекомендация: " << recommendation << endl;
 }
 
 // Функция для тестирования программы
 void run_tests() {
     cout << "\n=== ТЕСТИРОВАНИЕ ПРОГРАММЫ ===\n";
     
-    vector<pair<string, bool>> test_results;
+    vector<pair<string, bool> > test_results;
     EfficiencyCalculator calculator;
     
     // Тест 1: Нормальные данные
     calculator.setParameters(5.0, 100000.0, 100);
     SafetyMeasure test1 = {"Тест1", 500000.0, 50000.0, 20.0};
     double result1 = calculator.calculateEfficiencyCoefficient(test1);
-    test_results.push_back({"Тест 1 (нормальные данные)", result1 > 0});
+    test_results.push_back(make_pair("Тест 1 (нормальные данные)", result1 > 0));
     
     // Тест 2: Нулевая стоимость внедрения
     SafetyMeasure test2 = {"Тест2", 0.0, 10000.0, 10.0};
     double result2 = calculator.calculateEfficiencyCoefficient(test2);
-    test_results.push_back({"Тест 2 (нулевая стоимость)", result2 > 0});
+    test_results.push_back(make_pair("Тест 2 (нулевая стоимость)", result2 > 0));
     
     // Тест 3: Максимальное снижение травматизма
     SafetyMeasure test3 = {"Тест3", 1000000.0, 100000.0, 100.0};
     double result3 = calculator.calculateEfficiencyCoefficient(test3);
-    test_results.push_back({"Тест 3 (100% снижение)", result3 > 0.1});
+    test_results.push_back(make_pair("Тест 3 (100% снижение)", result3 > 0.1));
     
     // Тест 4: Неокупаемое мероприятие
     SafetyMeasure test4 = {"Тест4", 1000000.0, 500000.0, 1.0};
     double result4 = calculator.calculatePaybackPeriod(test4);
-    test_results.push_back({"Тест 4 (неокупаемое)", result4 < 0});
+    test_results.push_back(make_pair("Тест 4 (неокупаемое)", result4 < 0));
     
     // Вывод результатов тестирования
     cout << "Результаты тестирования:\n";
-    for (const auto& test : test_results) {
-        cout << test.first << ": " 
-             << (test.second ? "ПРОЙДЕН" : "НЕ ПРОЙДЕН") << endl;
+    for (size_t i = 0; i < test_results.size(); ++i) {
+        cout << test_results[i].first << ": " 
+             << (test_results[i].second ? "ПРОЙДЕН" : "НЕ ПРОЙДЕН") << endl;
     }
     
     cout << "\nВсего тестов: " << test_results.size() << endl;
     int passed = 0;
-    for (const auto& test : test_results) {
-        if (test.second) passed++;
+    for (size_t i = 0; i < test_results.size(); ++i) {
+        if (test_results[i].second) passed++;
     }
     cout << "Успешно пройдено: " << passed << endl;
 }
 
 // Главная функция
 int main() {
+    // Настройка кодировки для корректного отображения русского текста
+    #ifdef _WIN32
+        SetConsoleOutputCP(1251);      // Устанавливаем кодировку Windows-1251
+        SetConsoleCP(1251);            // Устанавливаем кодировку ввода
+    #endif
+    
     setlocale(LC_ALL, "Russian");
     
-    cout << "Программа 'Калькулятор эффективности мероприятий по охране труда'\n";
+    cout << "=========================================\n";
+    cout << " КАЛЬКУЛЯТОР ЭФФЕКТИВНОСТИ МЕРОПРИЯТИЙ\n";
+    cout << "         ПО ОХРАНЕ ТРУДА\n";
+    cout << "=========================================\n";
     cout << "Версия 1.0\n";
-    cout << "Автор: Примоченко И.В.\n";
+    cout << "Автор: Примоченко И.В., группа УИБО-14-24\n";
+    cout << "РТУ МИРЭА, 2025 год\n";
+    cout << "=========================================\n\n";
     
     bool running = true;
     
